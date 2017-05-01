@@ -1,5 +1,5 @@
 pub use prelude::*;
-pub use ops::*;
+pub use opcodes::*;
 pub use peripherals::Peripherals;
 
 pub struct Machine {

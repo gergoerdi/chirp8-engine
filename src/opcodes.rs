@@ -1,6 +1,7 @@
 pub use prelude::*;
 
-#[derive(Debug)]
+use core::prelude::v1::*;
+
 struct RawOp {
     op : Nybble,
     x : Nybble,
@@ -10,7 +11,6 @@ struct RawOp {
     nn : Byte,
 }
 
-#[derive(Debug)]
 pub enum Cmp {
     Eq,
     NEq
@@ -18,18 +18,15 @@ pub enum Cmp {
 
 type Reg = Nybble;
 
-#[derive(Debug)]
 pub enum Arg {
     Reg(Reg),
     Imm(Byte)
 }
 
-#[derive(Debug)]
 pub enum Arith {
     Load, Or, And, XOr, Add, Sub, ShiftR, ShiftL, SubFlip
 }
 
-#[derive(Debug)]
 pub enum Op {
     ClearScr,
     Ret,

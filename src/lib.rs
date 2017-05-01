@@ -1,6 +1,6 @@
 #![no_std]
 
 pub mod prelude;
-pub mod ops;
+pub mod opcodes;
 pub mod peripherals;
 pub mod machine;
