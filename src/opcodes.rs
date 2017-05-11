@@ -66,6 +66,21 @@ fn raw_op(hi: Byte, lo: Byte) -> RawOp {
     }
 }
 
+fn decode_arith(n: Nybble) -> Option<Arith> {
+    match n {
+        0x0 => Some(Arith::Load),
+        0x1 => Some(Arith::Or),
+        0x2 => Some(Arith::And),
+        0x3 => Some(Arith::XOr),
+        0x4 => Some(Arith::Add),
+        0x5 => Some(Arith::Sub),
+        0x6 => Some(Arith::ShiftR),
+        0x7 => Some(Arith::SubFlip),
+        0xe => Some(Arith::ShiftL),
+        _ => None
+    }
+}
+
 fn decode_raw(raw: RawOp) -> Option<Op> {
     match raw.op {
         0x0 if raw.nn == 0xe0 => Some(Op::ClearScr),
@@ -79,18 +94,7 @@ fn decode_raw(raw: RawOp) -> Option<Op> {
         0x6 => Some(Op::LoadImm(raw.x, raw.nn)),
         0x7 => Some(Op::AddImm(raw.x, raw.nn)),
         0x8 => {
-            let op = match raw.n {
-                0x0 => Some(Arith::Load),
-                0x1 => Some(Arith::Or),
-                0x2 => Some(Arith::And),
-                0x3 => Some(Arith::XOr),
-                0x4 => Some(Arith::Add),
-                0x5 => Some(Arith::Sub),
-                0x6 => Some(Arith::ShiftR),
-                0x7 => Some(Arith::SubFlip),
-                0xe => Some(Arith::ShiftL),
-                _ => None
-            };
+            let op = decode_arith(raw.n);
             op.map(|op| Op::Arith(op, raw.x, raw.y))
         },
         0x9 => Some(Op::Skip(Cmp::NEq, raw.x, Arg::Reg(raw.y))),
