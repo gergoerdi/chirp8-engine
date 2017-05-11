@@ -70,6 +70,7 @@ impl CPU {
         0
     }
 
+    #[inline(never)]
     pub fn step<P>(&mut self, io: &mut P) where P: Peripherals {
         let hi = io.read_ram(self.pc); self.pc += 1;
         let lo = io.read_ram(self.pc); self.pc += 1;
