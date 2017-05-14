@@ -77,7 +77,7 @@ impl Machine {
             0xb => (3, 2),
             0xf => (3, 3),
 
-            _ => panic!("Impossible")
+            _ => unreachable!()
         }
     }
 
@@ -103,7 +103,7 @@ impl Machine {
             (3, 2) => 0xb,
             (3, 3) => 0xf,
 
-            _ => panic!("Impossible")
+            _ => unreachable!()
         }
     }
 
