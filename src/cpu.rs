@@ -232,11 +232,11 @@ impl CPU {
                     for j in 0..8 {
                         let xd = (self.regs[vx as usize] + j) & 0x3f;
 
-                        let old_pixel = io.get_pixel(xd + 10, yd + 8);
+                        let old_pixel = io.get_pixel(xd, yd);
                         let new_pixel = (row & (1 << 7)) != 0;
                         row <<= 1;
                         collision |= old_pixel && new_pixel;
-                        io.set_pixel(xd + 10, yd + 8, old_pixel != new_pixel);
+                        io.set_pixel(xd, yd, old_pixel != new_pixel);
                     }
                 };
                 io.redraw();
@@ -245,7 +245,7 @@ impl CPU {
             Op::ClearScr => {
                 for x in 0..64 {
                     for y in 0..32 {
-                        io.set_pixel(x + 10, y + 8, false);
+                        io.set_pixel(x, y, false);
                     }
                 }
             },
