@@ -6,9 +6,8 @@ pub const SCREEN_HEIGHT : u8 = 32;
 pub trait Peripherals {
     fn keep_running(&self) -> bool;
 
-    fn clear_pixels(&mut self);
-    fn set_pixel(&mut self, x: Byte, y: Byte, _: bool);
-    fn get_pixel(&self, x: Byte, y: Byte) -> bool;
+    fn set_pixel_row(&mut self, y: ScreenY, row: ScreenRow);
+    fn get_pixel_row(&self, y: ScreenY) -> ScreenRow;
     fn redraw(&mut self);
 
     fn get_keys(&self) -> u16;

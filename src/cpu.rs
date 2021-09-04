@@ -161,27 +161,23 @@ impl CPU {
             },
             Op::Draw(vx, vy, n) => {
                 let mut collision = false;
+                let xd = (self.regs[vx as usize]) & 0x3f;
                 for i in 0..n {
                     let yd = (self.regs[vy as usize] + i) & 0x1f;
-                    let mut row = io.read_ram(self.addr + i as Addr);
-                    for j in 0..8 {
-                        let xd = (self.regs[vx as usize] + j) & 0x3f;
+                    let dat = io.read_ram(self.addr + i as Addr);
+                    let row = ((dat as ScreenRow) << 56) >> xd;
 
-                        let old_pixel = io.get_pixel(xd, yd);
-                        let new_pixel = (row & (1 << 7)) != 0;
-                        row <<= 1;
-                        collision |= old_pixel && new_pixel;
-                        io.set_pixel(xd, yd, old_pixel != new_pixel);
-                    }
+                    let old_row = io.get_pixel_row(yd);
+                    let new_row = old_row ^ row;
+                    collision |= old_row & row != 0;
+                    io.set_pixel_row(yd, new_row);
                 };
                 io.redraw();
                 self.set_flag(collision);
             },
             Op::ClearScr => {
-                for x in 0..64 {
-                    for y in 0..32 {
-                        io.set_pixel(x, y, false);
-                    }
+                for y in 0..32 {
+                    io.set_pixel_row(y, 0);
                 }
             },
             Op::SkipKey(cond, vx) => {
