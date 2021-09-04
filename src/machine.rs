@@ -107,7 +107,7 @@ impl Machine {
         }
     }
 
-    fn wait_key<P>(&self, io: &P) -> (Byte, Byte) where P: Peripherals {
+    fn wait_key<P>(&self, io: &mut P) -> (Byte, Byte) where P: Peripherals {
         let mut init_states = [0; 4];
         for (row, state) in init_states.iter_mut().enumerate() {
             *state = io.scan_key_row(row as Byte)
@@ -135,7 +135,7 @@ impl Machine {
         (0, 0)
     }
 
-    pub fn step<P>(&mut self, io: &P) where P: Peripherals {
+    pub fn step<P>(&mut self, io: &mut P) where P: Peripherals {
         let hi = io.read_ram(self.pc); self.pc += 1;
         let lo = io.read_ram(self.pc); self.pc += 1;
 
