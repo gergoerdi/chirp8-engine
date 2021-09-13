@@ -1,5 +1,5 @@
 [package]
-name = "chip8-engine"
+name = "chirp8-engine"
 version = "0.1.0"
 authors = ["Dr. ERDI Gergo <gergo@erdi.hu>"]
 
