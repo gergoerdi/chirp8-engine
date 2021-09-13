@@ -2,7 +2,7 @@ pub use prelude::*;
 pub use opcodes::*;
 pub use peripherals::Peripherals;
 
-pub struct Machine {
+pub struct CPU {
     regs: [Byte; 16],
     addr: Addr,
     pc: Addr,
@@ -10,13 +10,13 @@ pub struct Machine {
     sp: usize,
 }
 
-impl Machine {
-    pub fn new() -> Machine {
-        Machine{ regs : [0; 16],
-                 addr: 0,
-                 pc: 0x200,
-                 stack: [0; 16],
-                 sp: 0
+impl CPU {
+    pub fn new() -> CPU {
+        CPU{ regs : [0; 16],
+             addr: 0,
+             pc: 0x200,
+             stack: [0; 16],
+             sp: 0
         }
     }
 
@@ -180,7 +180,7 @@ impl Machine {
             Op::Arith(op, vx, vy) => {
                 let x = self.regs[vx as usize];
                 let y = self.regs[vy as usize];
-                let (z, flag) = Machine::arith(op, x, y);
+                let (z, flag) = CPU::arith(op, x, y);
                 self.regs[vx as usize] = z;
                 flag.map(|flag| { self.set_flag(flag); });
             },
@@ -250,7 +250,7 @@ impl Machine {
                 }
             },
             Op::SkipKey(cond, vx) => {
-                let (row, col) = Machine::key_coords(self.regs[vx as usize]);
+                let (row, col) = CPU::key_coords(self.regs[vx as usize]);
                 let pressed = (io.scan_key_row(row) & (1 << col)) != 0;
                 let target = match cond {
                     Cmp::Eq => true,
@@ -261,7 +261,7 @@ impl Machine {
                 }
             },
             Op::WaitKey(vx) => {
-                self.regs[vx as usize] = Machine::coords_key(self.wait_key(io));
+                self.regs[vx as usize] = CPU::coords_key(self.wait_key(io));
             },
             Op::SetSound(vx) => {
                 io.set_sound(self.regs[vx as usize]);

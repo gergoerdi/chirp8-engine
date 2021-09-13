@@ -3,4 +3,4 @@
 pub mod prelude;
 pub mod opcodes;
 pub mod peripherals;
-pub mod machine;
+pub mod cpu;
