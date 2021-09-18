@@ -108,29 +108,17 @@ impl CPU {
     }
 
     fn wait_key<P>(&self, io: &mut P) -> (Byte, Byte) where P: Peripherals {
-        let mut init_states = [0; 4];
-        for (row, state) in init_states.iter_mut().enumerate() {
-            *state = io.scan_key_row(row as Byte)
-        }
+        let mut old_state = io.get_keys();
 
         while io.keep_running() {
-            for (row, old_state) in init_states.iter_mut().enumerate() {
-                let new_state = io.scan_key_row(row as Byte);
-                let mut fresh_keys = new_state & !*old_state;
-                if fresh_keys != 0 {
-                    let mut col = 0;
-                    loop {
-                        if fresh_keys & 0x1 != 0 {
-                            return (row as Byte, col)
-                        }
-                        fresh_keys >>= 1;
-                        col += 1;
-                    }
-                }
+            let new_state = io.get_keys();
 
-                *old_state &= new_state;
-            }
-        };
+            let fresh_keys = new_state & !old_state;
+            let idx = fresh_keys.leading_zeros() as u8;
+            if idx < 16 { return (idx / 4, idx % 4); }
+
+            old_state &= new_state;
+        }
 
         (0, 0)
     }
@@ -251,7 +239,7 @@ impl CPU {
             },
             Op::SkipKey(cond, vx) => {
                 let (row, col) = CPU::key_coords(self.regs[vx as usize]);
-                let pressed = (io.scan_key_row(row) & (1 << col)) != 0;
+                let pressed = io.get_keys() & (1 << (row * 4 + col)) != 0;
                 let target = match cond {
                     Cmp::Eq => true,
                     Cmp::NEq => false

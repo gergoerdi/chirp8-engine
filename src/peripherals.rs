@@ -11,7 +11,7 @@ pub trait Peripherals {
     fn get_pixel(&self, x: Byte, y: Byte) -> bool;
     fn redraw(&mut self);
 
-    fn scan_key_row(&self, row: Byte) -> Byte;
+    fn get_keys(&self) -> u16;
 
     fn set_timer(&mut self, val: Byte);
     fn get_timer(&self) -> Byte;
