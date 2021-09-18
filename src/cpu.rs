@@ -54,73 +54,20 @@ impl CPU {
         self.regs[0xf] = if flag { 1 } else { 0 };
     }
 
-    fn key_coords(key: Byte) -> (Byte, Byte) {
-        match key & 0xf {
-
-            0x1 => (0, 0),
-            0x2 => (0, 1),
-            0x3 => (0, 2),
-            0xc => (0, 3),
-
-            0x4 => (1, 0),
-            0x5 => (1, 1),
-            0x6 => (1, 2),
-            0xd => (1, 3),
-
-            0x7 => (2, 0),
-            0x8 => (2, 1),
-            0x9 => (2, 2),
-            0xe => (2, 3),
-
-            0xa => (3, 0),
-            0x0 => (3, 1),
-            0xb => (3, 2),
-            0xf => (3, 3),
-
-            _ => unreachable!()
-        }
-    }
-
-    fn coords_key(coords: (Byte, Byte)) -> Byte {
-        match coords {
-            (0, 0) => 0x1,
-            (0, 1) => 0x2,
-            (0, 2) => 0x3,
-            (0, 3) => 0xc,
-
-            (1, 0) => 0x4,
-            (1, 1) => 0x5,
-            (1, 2) => 0x6,
-            (1, 3) => 0xd,
-
-            (2, 0) => 0x7,
-            (2, 1) => 0x8,
-            (2, 2) => 0x9,
-            (2, 3) => 0xe,
-
-            (3, 0) => 0xa,
-            (3, 1) => 0x0,
-            (3, 2) => 0xb,
-            (3, 3) => 0xf,
-
-            _ => unreachable!()
-        }
-    }
-
-    fn wait_key<P>(&self, io: &mut P) -> (Byte, Byte) where P: Peripherals {
+    fn wait_key<P>(&self, io: &mut P) -> Byte where P: Peripherals {
         let mut old_state = io.get_keys();
 
         while io.keep_running() {
             let new_state = io.get_keys();
 
             let fresh_keys = new_state & !old_state;
-            let idx = fresh_keys.leading_zeros() as u8;
-            if idx < 16 { return (idx / 4, idx % 4); }
+            let idx = fresh_keys.trailing_zeros() as Byte;
+            if idx < 16 { return idx };
 
             old_state &= new_state;
         }
 
-        (0, 0)
+        0
     }
 
     pub fn step<P>(&mut self, io: &mut P) where P: Peripherals {
@@ -238,8 +185,7 @@ impl CPU {
                 }
             },
             Op::SkipKey(cond, vx) => {
-                let (row, col) = CPU::key_coords(self.regs[vx as usize]);
-                let pressed = io.get_keys() & (1 << (row * 4 + col)) != 0;
+                let pressed = io.get_keys() & (1 << vx) != 0;
                 let target = match cond {
                     Cmp::Eq => true,
                     Cmp::NEq => false
@@ -249,7 +195,7 @@ impl CPU {
                 }
             },
             Op::WaitKey(vx) => {
-                self.regs[vx as usize] = CPU::coords_key(self.wait_key(io));
+                self.regs[vx as usize] = self.wait_key(io);
             },
             Op::SetSound(vx) => {
                 io.set_sound(self.regs[vx as usize]);
