@@ -7,18 +7,18 @@ pub trait Peripherals {
     fn keep_running(&self) -> bool;
 
     fn clear_pixels(&self);
-    fn set_pixel(&self, Byte, Byte, bool);
-    fn get_pixel(&self, Byte, Byte) -> bool;
+    fn set_pixel(&self, x: Byte, y: Byte, _: bool);
+    fn get_pixel(&self, x: Byte, y: Byte) -> bool;
     fn redraw(&self);
 
-    fn scan_key_row(&self, Byte) -> Byte;
+    fn scan_key_row(&self, row: Byte) -> Byte;
 
-    fn set_timer(&self, Byte);
+    fn set_timer(&self, val: Byte);
     fn get_timer(&self) -> Byte;
-    fn set_sound(&self, Byte);
+    fn set_sound(&self, val: Byte);
 
-    fn read_ram(&self, Addr) -> Byte;
-    fn write_ram(&self, Addr, Byte);
+    fn read_ram(&self, addr: Addr) -> Byte;
+    fn write_ram(&self, addr: Addr, val: Byte);
 
     fn get_random(&self) -> Byte;
 }

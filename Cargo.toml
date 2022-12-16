@@ -1,6 +1,6 @@
 [package]
 name = "chirp8-engine"
 version = "0.1.0"
-authors = ["Dr. ERDI Gergo <gergo@erdi.hu>"]
+authors = ["Gergő ÉRDI <gergo@erdi.hu>"]
 
 [dependencies]

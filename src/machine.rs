@@ -109,12 +109,12 @@ impl Machine {
 
     fn wait_key<P>(&self, io: &P) -> (Byte, Byte) where P: Peripherals {
         let mut init_states = [0; 4];
-        for (row, mut state) in init_states.iter_mut().enumerate() {
+        for (row, state) in init_states.iter_mut().enumerate() {
             *state = io.scan_key_row(row as Byte)
         }
 
         while io.keep_running() {
-            for (row, mut old_state) in init_states.iter_mut().enumerate() {
+            for (row, old_state) in init_states.iter_mut().enumerate() {
                 let new_state = io.scan_key_row(row as Byte);
                 let mut fresh_keys = new_state & !*old_state;
                 if fresh_keys != 0 {
@@ -212,7 +212,7 @@ impl Machine {
                 let x = self.regs[vx as usize];
                 io.write_ram(self.addr, x / 100);
                 io.write_ram(self.addr + 1, (x % 100) / 10);
-                io.write_ram(self.addr + 2, (x % 10));
+                io.write_ram(self.addr + 2, x % 10);
             },
             Op::Save(vx) => {
                 for i in 0..vx as usize +1 {
