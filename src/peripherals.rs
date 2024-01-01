@@ -9,8 +9,6 @@ pub trait Peripherals {
 
     fn get_keys(&self) -> u16;
 
-    fn set_timer(&mut self, val: Byte);
-    fn get_timer(&self) -> Byte;
     fn set_sound(&mut self, val: Byte);
 
     fn read_ram(&self, addr: Addr) -> Byte;

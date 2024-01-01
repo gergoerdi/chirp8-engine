@@ -9,17 +9,24 @@ pub struct CPU {
     stack: [Addr; 16],
     sp: usize,
     rnd: Addr,
+    timer: Byte,
 }
 
 impl CPU {
-    pub fn new() -> CPU {
+    pub const fn new() -> CPU {
         CPU{ regs : [0; 16],
              addr: 0,
              pc: 0x200,
              stack: [0; 16],
              sp: 0,
              rnd: 0xf00f,
+             timer: 0,
         }
+    }
+
+    pub fn tick_frame(&mut self) {
+        if self.timer > 0 { self.timer -= 1 };
+        self.next_random();
     }
 
     fn eval(&self, arg: Arg) -> Byte {
@@ -138,10 +145,10 @@ impl CPU {
                 self.addr = addr & 0x0fff;
             },
             Op::GetTimer(vx) => {
-               self.regs[vx as usize] = io.get_timer();
+               self.regs[vx as usize] = self.timer;
             },
             Op::SetTimer(vx) => {
-                io.set_timer(self.regs[vx as usize]);
+                self.timer = self.regs[vx as usize];
             },
             Op::JumpV0(addr) => {
                 self.pc = addr + self.regs[0] as Addr;
