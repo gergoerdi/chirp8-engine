@@ -10,6 +10,7 @@ pub struct CPU {
     sp: usize,
     rnd: Addr,
     timer: Byte,
+    prev_kbd_state: u16,
 }
 
 impl CPU {
@@ -21,6 +22,7 @@ impl CPU {
              sp: 0,
              rnd: 0xf00f,
              timer: 0,
+             prev_kbd_state: 0xffff,
         }
     }
 
@@ -63,20 +65,13 @@ impl CPU {
         self.regs[0xf] = if flag { 1 } else { 0 };
     }
 
-    fn wait_key<P>(&self, io: &mut P) -> Byte where P: Peripherals {
-        let mut old_state = io.get_keys();
+    fn try_wait_key<P>(&mut self, io: &mut P) -> Option<Byte> where P: Peripherals {
+        let new_state = io.get_keys();
 
-        while io.keep_running() {
-            let new_state = io.get_keys();
-
-            let fresh_keys = new_state & !old_state;
-            let idx = fresh_keys.trailing_zeros() as Byte;
-            if idx < 16 { return idx };
-
-            old_state &= new_state;
-        }
-
-        0
+        let fresh_keys = new_state & !self.prev_kbd_state;
+        self.prev_kbd_state = new_state;
+        let idx = fresh_keys.trailing_zeros() as Byte;
+        if idx < 16 { Some(idx) } else { None }
     }
 
     /// 16-bit LFSR a la https://en.wikipedia.org/wiki/Linear-feedback_shift_register
@@ -207,7 +202,10 @@ impl CPU {
                 }
             },
             Op::WaitKey(vx) => {
-                self.regs[vx as usize] = self.wait_key(io);
+                match self.try_wait_key(io) {
+                    Some(key) => { self.regs[vx as usize] = key },
+                    None => { self.pc -= 2 }
+                }
             },
             Op::SetSound(vx) => {
                 io.set_sound(self.regs[vx as usize]);

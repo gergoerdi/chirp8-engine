@@ -1,8 +1,6 @@
 use prelude::*;
 
 pub trait Peripherals {
-    fn keep_running(&self) -> bool;
-
     fn set_pixel_row(&mut self, y: ScreenY, row: ScreenRow);
     fn get_pixel_row(&self, y: ScreenY) -> ScreenRow;
     fn redraw(&mut self);
