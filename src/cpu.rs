@@ -8,6 +8,7 @@ pub struct CPU {
     pc: Addr,
     stack: [Addr; 16],
     sp: usize,
+    rnd: Addr,
 }
 
 impl CPU {
@@ -16,7 +17,8 @@ impl CPU {
              addr: 0,
              pc: 0x200,
              stack: [0; 16],
-             sp: 0
+             sp: 0,
+             rnd: 0xf00f,
         }
     }
 
@@ -68,6 +70,14 @@ impl CPU {
         }
 
         0
+    }
+
+    /// 16-bit LFSR a la https://en.wikipedia.org/wiki/Linear-feedback_shift_register
+    fn next_random(&mut self) -> Byte {
+        let lsb = self.rnd & 1 != 0;
+        self.rnd >>= 1;
+        if lsb { self.rnd ^= 0xb400 }
+        self.rnd as Byte
     }
 
     pub fn step<P>(&mut self, io: &mut P) where P: Peripherals {
@@ -137,8 +147,7 @@ impl CPU {
                 self.pc = addr + self.regs[0] as Addr;
             },
             Op::Random(vx, mask) => {
-                let rnd = io.get_random();
-                self.regs[vx as usize] = rnd & mask;
+                self.regs[vx as usize] = self.next_random() & mask;
             },
             Op::Hex(vx) => {
                 self.addr = (self.regs[vx as usize] as u16 & 0x0f) << 3;

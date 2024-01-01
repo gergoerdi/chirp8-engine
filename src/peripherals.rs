@@ -15,6 +15,4 @@ pub trait Peripherals {
 
     fn read_ram(&self, addr: Addr) -> Byte;
     fn write_ram(&mut self, addr: Addr, val: Byte);
-
-    fn get_random(&mut self) -> Byte;
 }
