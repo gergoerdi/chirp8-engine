@@ -50,11 +50,11 @@ impl CPU {
             },
             Arith::Sub => {
                 let (z, f) = u8::overflowing_sub(x, y);
-                (z, Some(f))
+                (z, Some(!f))
             },
             Arith::SubFlip => {
                 let (z, f) = u8::overflowing_sub(y, x);
-                (z, Some(f))
+                (z, Some(!f))
             },
             Arith::ShiftL => (x << 1, Some(x & 0x80 != 0)),
             Arith::ShiftR => (x >> 1, Some(x & 0x01 != 0))
