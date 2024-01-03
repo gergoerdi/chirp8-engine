@@ -236,7 +236,7 @@ impl<Q: Quirks> CPU<Q> {
                 for i in 0..n {
                     let yd = (self.regs[vy as usize] + i) & 0x1f;
                     let dat = io.read_ram(self.ptr + i as Addr);
-                    let row = ((dat as ScreenRow) << 56) >> xd;
+                    let row = ((dat as ScreenRow) << 56).rotate_right(xd as u32);
 
                     let old_row = io.get_pixel_row(yd);
                     let new_row = old_row ^ row;
