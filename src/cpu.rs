@@ -10,7 +10,8 @@ pub struct CPU {
     sp: usize,
     rnd: Addr,
     timer: Byte,
-    prev_kbd_state: u16,
+    prev_key_state: u16,
+    prev_key: Option<u8>,
 }
 
 impl CPU {
@@ -22,7 +23,8 @@ impl CPU {
              sp: 0,
              rnd: 0xf00f,
              timer: 0,
-             prev_kbd_state: 0xffff,
+             prev_key_state: 0xffff,
+             prev_key: None,
         }
     }
 
@@ -65,11 +67,11 @@ impl CPU {
         self.regs[0xf] = if flag { 1 } else { 0 };
     }
 
-    fn try_wait_key<P>(&mut self, io: &mut P) -> Option<Byte> where P: Peripherals {
+    fn try_get_key<P>(&mut self, io: &mut P) -> Option<Byte> where P: Peripherals {
         let new_state = io.get_keys();
 
-        let fresh_keys = new_state & !self.prev_kbd_state;
-        self.prev_kbd_state = new_state;
+        let fresh_keys = new_state & !self.prev_key_state;
+        self.prev_key_state = new_state;
         let idx = fresh_keys.trailing_zeros() as Byte;
         if idx < 16 { Some(idx) } else { None }
     }
@@ -202,9 +204,22 @@ impl CPU {
                 }
             },
             Op::WaitKey(vx) => {
-                match self.try_wait_key(io) {
-                    Some(key) => { self.regs[vx as usize] = key },
-                    None => { self.pc -= 2 }
+                match self.prev_key {
+                    None => {
+                        if let Some(key) = self.try_get_key(io) {
+                            self.regs[vx as usize] = key;
+                            self.prev_key = Some(key);
+                        }
+                        self.pc -= 2;
+                    },
+                    Some(key) => {
+                        let pressed = io.get_keys() & (1 << key) != 0;
+                        if !pressed {
+                            self.prev_key = None;
+                        } else {
+                            self.pc -= 2;
+                        }
+                    }
                 }
             },
             Op::SetSound(vx) => {
