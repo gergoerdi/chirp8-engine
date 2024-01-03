@@ -43,9 +43,9 @@ impl CPU {
     fn arith(op: Arith, x: Byte, y: Byte) -> (Byte, Option<bool>) {
         match op {
             Arith::Load => (y, None),
-            Arith::Or => (x | y, None),
-            Arith::And => (x & y, None),
-            Arith::XOr => (x ^ y, None),
+            Arith::Or => (x | y, Some(false)),
+            Arith::And => (x & y, Some(false)),
+            Arith::XOr => (x ^ y, Some(false)),
             Arith::Add => {
                 let (z, f) = u8::overflowing_add(x, y);
                 (z, Some(f))
@@ -58,8 +58,8 @@ impl CPU {
                 let (z, f) = u8::overflowing_sub(y, x);
                 (z, Some(!f))
             },
-            Arith::ShiftL => (x << 1, Some(x & 0x80 != 0)),
-            Arith::ShiftR => (x >> 1, Some(x & 0x01 != 0))
+            Arith::ShiftL => (y << 1, Some(y & 0x80 != 0)),
+            Arith::ShiftR => (y >> 1, Some(y & 0x01 != 0))
         }
     }
 
