@@ -8,6 +8,7 @@ pub trait Quirks {
     const SHIFT_VY: bool;
     const RESET_VF: bool;
     const INCREMENT_PTR: bool;
+    const VIDEO_WAIT: bool;
 }
 
 pub struct DefaultQuirks;
@@ -16,12 +17,14 @@ impl Quirks for DefaultQuirks {
     const SHIFT_VY: bool = true;
     const RESET_VF: bool = true;
     const INCREMENT_PTR: bool = true;
+    const VIDEO_WAIT: bool = true;
 }
 
 enum State {
     Running,
     WaitPress(Byte, u16),
     WaitRelease(Byte),
+    WaitFrame,
 }
 
 pub struct CPU<Q: Quirks> {
@@ -54,6 +57,10 @@ impl<Q: Quirks> CPU<Q> {
     pub fn tick_frame(&mut self) {
         if self.timer > 0 { self.timer -= 1 };
         self.next_random();
+
+        if let State::WaitFrame = self.state {
+            self.state = State::Running;
+        }
     }
 
     fn eval(&self, arg: Arg) -> Byte {
@@ -107,6 +114,7 @@ impl<Q: Quirks> CPU<Q> {
     pub fn step<P>(&mut self, io: &mut P) where P: Peripherals {
         match self.state {
             State::Running => self.exec(io),
+            State::WaitFrame => (),
             State::WaitPress(vx, prev_key_state) => {
                 let new_state = io.get_keys();
 
@@ -236,11 +244,13 @@ impl<Q: Quirks> CPU<Q> {
                     io.set_pixel_row(yd, new_row);
                 };
                 self.set_flag(collision);
+                if Q::VIDEO_WAIT { self.state = State::WaitFrame };
             },
             Op::ClearScr => {
                 for y in 0..32 {
                     io.set_pixel_row(y, 0);
                 }
+                if Q::VIDEO_WAIT { self.state = State::WaitFrame };
             },
             Op::SkipKey(cond, vx) => {
                 let pressed = io.get_keys() & (1 << self.regs[vx as usize]) != 0;
