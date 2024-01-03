@@ -9,6 +9,7 @@ pub trait Quirks {
     const RESET_VF: bool;
     const INCREMENT_PTR: bool;
     const VIDEO_WAIT: bool;
+    const CLIP_SPRITES: bool;
 }
 
 pub struct DefaultQuirks;
@@ -18,6 +19,7 @@ impl Quirks for DefaultQuirks {
     const RESET_VF: bool = true;
     const INCREMENT_PTR: bool = true;
     const VIDEO_WAIT: bool = true;
+    const CLIP_SPRITES: bool = true;
 }
 
 enum State {
@@ -232,11 +234,18 @@ impl<Q: Quirks> CPU<Q> {
             },
             Op::Draw(vx, vy, n) => {
                 let mut collision = false;
-                let xd = (self.regs[vx as usize]) & 0x3f;
+
+                let yd0 = self.regs[vy as usize] & 0x1f;
+                let xd = self.regs[vx as usize] & 0x3f;
+
                 for i in 0..n {
-                    let yd = (self.regs[vy as usize] + i) & 0x1f;
+                    let yd = yd0 + i;
+                    if Q::CLIP_SPRITES && yd > 31 { break }
+
+                    let yd = yd & 0x1f;
                     let dat = io.read_ram(self.ptr + i as Addr);
-                    let row = ((dat as ScreenRow) << 56).rotate_right(xd as u32);
+                    let row0 = (dat as ScreenRow) << 56;
+                    let row = if Q::CLIP_SPRITES { row0 >> xd } else { row0.rotate_right(xd as u32) };
 
                     let old_row = io.get_pixel_row(yd);
                     let new_row = old_row ^ row;
