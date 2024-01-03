@@ -192,7 +192,7 @@ impl CPU {
                 }
             },
             Op::SkipKey(cond, vx) => {
-                let pressed = io.get_keys() & (1 << vx) != 0;
+                let pressed = io.get_keys() & (1 << self.regs[vx as usize]) != 0;
                 let target = match cond {
                     Cmp::Eq => true,
                     Cmp::NEq => false
