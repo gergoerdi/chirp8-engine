@@ -215,21 +215,26 @@ impl<Q: Quirks> CPU<Q> {
                 io.write_ram(self.ptr, x / 100);
                 io.write_ram(self.ptr + 1, (x % 100) / 10);
                 io.write_ram(self.ptr + 2, x % 10);
-                if Q::INCREMENT_PTR {
-                    self.ptr += 3;
-                }
             },
             Op::Save(vx) => {
+                let mut ptr = self.ptr;
+
                 for i in 0..vx as usize +1 {
-                    io.write_ram(self.ptr + i as Addr, self.regs[i])
+                    io.write_ram(ptr, self.regs[i]);
+                    ptr += 1;
                 }
                 if Q::INCREMENT_PTR {
-                    self.ptr += 3;
+                    self.ptr = ptr;
                 }
             },
             Op::Restore(vx) => {
+                let mut ptr = self.ptr;
                 for i in 0..vx as usize +1 {
-                    self.regs[i] = io.read_ram(self.ptr + i as Addr)
+                    self.regs[i] = io.read_ram(ptr);
+                    ptr += 1;
+                }
+                if Q::INCREMENT_PTR {
+                    self.ptr = ptr;
                 }
             },
             Op::Draw(vx, vy, n) => {
