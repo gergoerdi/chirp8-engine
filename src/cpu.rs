@@ -215,7 +215,6 @@ impl<Q: Quirks> CPU<Q> {
                     collision |= old_row & row != 0;
                     io.set_pixel_row(yd, new_row);
                 };
-                io.redraw();
                 self.set_flag(collision);
             },
             Op::ClearScr => {
