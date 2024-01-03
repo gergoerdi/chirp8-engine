@@ -18,7 +18,14 @@ impl Quirks for DefaultQuirks {
     const INCREMENT_PTR: bool = true;
 }
 
+enum State {
+    Running,
+    WaitPress(Byte, u16),
+    WaitRelease(Byte),
+}
+
 pub struct CPU<Q: Quirks> {
+    quirks: PhantomData<Q>,
     regs: [Byte; 16],
     ptr: Addr,
     pc: Addr,
@@ -26,23 +33,21 @@ pub struct CPU<Q: Quirks> {
     sp: usize,
     rnd: Addr,
     timer: Byte,
-    prev_key_state: u16,
-    prev_key: Option<u8>,
-    quirks: PhantomData<Q>,
+    state: State,
 }
 
 impl<Q: Quirks> CPU<Q> {
     pub const fn new() -> Self {
-        CPU{ regs : [0; 16],
-             ptr: 0,
-             pc: 0x200,
-             stack: [0; 16],
-             sp: 0,
-             rnd: 0xf00f,
-             timer: 0,
-             prev_key_state: 0xffff,
-             prev_key: None,
-             quirks: PhantomData,
+        CPU{
+            quirks: PhantomData,
+            regs : [0; 16],
+            ptr: 0,
+            pc: 0x200,
+            stack: [0; 16],
+            sp: 0,
+            rnd: 0xf00f,
+            timer: 0,
+            state: State::Running,
         }
     }
 
@@ -91,15 +96,6 @@ impl<Q: Quirks> CPU<Q> {
         self.regs[0xf] = if flag { 1 } else { 0 };
     }
 
-    fn try_get_key<P>(&mut self, io: &mut P) -> Option<Byte> where P: Peripherals {
-        let new_state = io.get_keys();
-
-        let fresh_keys = new_state & !self.prev_key_state;
-        self.prev_key_state = new_state;
-        let idx = fresh_keys.trailing_zeros() as Byte;
-        if idx < 16 { Some(idx) } else { None }
-    }
-
     /// 16-bit LFSR a la https://en.wikipedia.org/wiki/Linear-feedback_shift_register
     fn next_random(&mut self) -> Byte {
         let lsb = self.rnd & 1 != 0;
@@ -109,6 +105,30 @@ impl<Q: Quirks> CPU<Q> {
     }
 
     pub fn step<P>(&mut self, io: &mut P) where P: Peripherals {
+        match self.state {
+            State::Running => self.exec(io),
+            State::WaitPress(vx, prev_key_state) => {
+                let new_state = io.get_keys();
+
+                let fresh_keys = new_state & !prev_key_state;
+                let idx = fresh_keys.trailing_zeros() as Byte;
+                if idx < 16 {
+                    self.regs[vx as usize] = idx;
+                    self.state = State::WaitRelease(idx);
+                } else {
+                    self.state = State::WaitPress(vx, new_state);
+                }
+            },
+            State::WaitRelease(key) => {
+                let pressed = io.get_keys() & (1 << key) != 0;
+                if !pressed {
+                    self.state = State::Running;
+                }
+            }
+        }
+    }
+
+    pub fn exec<P>(&mut self, io: &mut P) where P: Peripherals {
         let hi = io.read_ram(self.pc); self.pc += 1;
         let lo = io.read_ram(self.pc); self.pc += 1;
 
@@ -233,23 +253,7 @@ impl<Q: Quirks> CPU<Q> {
                 }
             },
             Op::WaitKey(vx) => {
-                match self.prev_key {
-                    None => {
-                        if let Some(key) = self.try_get_key(io) {
-                            self.regs[vx as usize] = key;
-                            self.prev_key = Some(key);
-                        }
-                        self.pc -= 2;
-                    },
-                    Some(key) => {
-                        let pressed = io.get_keys() & (1 << key) != 0;
-                        if !pressed {
-                            self.prev_key = None;
-                        } else {
-                            self.pc -= 2;
-                        }
-                    }
-                }
+                self.state = State::WaitPress(vx, 0xffff);
             },
             Op::SetSound(vx) => {
                 io.set_sound(self.regs[vx as usize]);
