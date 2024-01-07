@@ -1,26 +1,7 @@
 pub use prelude::*;
 pub use opcodes::*;
 pub use peripherals::Peripherals;
-
-use core::marker::PhantomData;
-
-pub trait Quirks {
-    const SHIFT_VY: bool;
-    const RESET_VF: bool;
-    const INCREMENT_PTR: bool;
-    const VIDEO_WAIT: bool;
-    const CLIP_SPRITES: bool;
-}
-
-pub struct DefaultQuirks;
-
-impl Quirks for DefaultQuirks {
-    const SHIFT_VY: bool = true;
-    const RESET_VF: bool = true;
-    const INCREMENT_PTR: bool = true;
-    const VIDEO_WAIT: bool = true;
-    const CLIP_SPRITES: bool = true;
-}
+pub use quirks::*;
 
 enum State {
     Running,
@@ -29,8 +10,8 @@ enum State {
     WaitFrame,
 }
 
-pub struct CPU<Q: Quirks> {
-    quirks: PhantomData<Q>,
+pub struct CPU {
+    quirks: Quirks,
     regs: [Byte; 16],
     ptr: Addr,
     pc: Addr,
@@ -41,10 +22,10 @@ pub struct CPU<Q: Quirks> {
     state: State,
 }
 
-impl<Q: Quirks> CPU<Q> {
-    pub const fn new() -> Self {
+impl CPU {
+    pub const fn new(quirks: Quirks) -> Self {
         CPU{
-            quirks: PhantomData,
+            quirks: quirks,
             regs : [0; 16],
             ptr: 0,
             pc: 0x200,
@@ -72,12 +53,12 @@ impl<Q: Quirks> CPU<Q> {
         }
     }
 
-    fn arith(op: Arith, x: Byte, y: Byte) -> (Byte, Option<bool>) {
+    fn arith(&self, op: Arith, x: Byte, y: Byte) -> (Byte, Option<bool>) {
         match op {
             Arith::Load => (y, None),
-            Arith::Or => (x | y, if Q::RESET_VF { Some(false) } else { None }),
-            Arith::And => (x & y, if Q::RESET_VF { Some(false) } else { None }),
-            Arith::XOr => (x ^ y, if Q::RESET_VF { Some(false) } else { None }),
+            Arith::Or => (x | y, if self.quirks.reset_vf { Some(false) } else { None }),
+            Arith::And => (x & y, if self.quirks.reset_vf { Some(false) } else { None }),
+            Arith::XOr => (x ^ y, if self.quirks.reset_vf { Some(false) } else { None }),
             Arith::Add => {
                 let (z, f) = u8::overflowing_add(x, y);
                 (z, Some(f))
@@ -91,11 +72,11 @@ impl<Q: Quirks> CPU<Q> {
                 (z, Some(!f))
             },
             Arith::ShiftL => {
-                let arg = if Q::SHIFT_VY { y } else { x };
+                let arg = if self.quirks.shift_vy { y } else { x };
                 (arg << 1, Some(arg & 0x80 != 0))
             },
             Arith::ShiftR => {
-                let arg = if Q::SHIFT_VY { y } else { x };
+                let arg = if self.quirks.shift_vy { y } else { x };
                 (arg >> 1, Some(arg & 0x01 != 0))
             }
         }
@@ -183,7 +164,7 @@ impl<Q: Quirks> CPU<Q> {
             Op::Arith(op, vx, vy) => {
                 let x = self.regs[vx as usize];
                 let y = self.regs[vy as usize];
-                let (z, flag) = Self::arith(op, x, y);
+                let (z, flag) = self.arith(op, x, y);
                 self.regs[vx as usize] = z;
                 flag.map(|flag| { self.set_flag(flag); });
             },
@@ -223,7 +204,7 @@ impl<Q: Quirks> CPU<Q> {
                     io.write_ram(ptr, self.regs[i]);
                     ptr += 1;
                 }
-                if Q::INCREMENT_PTR {
+                if self.quirks.increment_ptr {
                     self.ptr = ptr;
                 }
             },
@@ -233,7 +214,7 @@ impl<Q: Quirks> CPU<Q> {
                     self.regs[i] = io.read_ram(ptr);
                     ptr += 1;
                 }
-                if Q::INCREMENT_PTR {
+                if self.quirks.increment_ptr {
                     self.ptr = ptr;
                 }
             },
@@ -245,12 +226,12 @@ impl<Q: Quirks> CPU<Q> {
 
                 for i in 0..n {
                     let yd = yd0 + i;
-                    if Q::CLIP_SPRITES && yd > 31 { break }
+                    if self.quirks.clip_sprites && yd > 31 { break }
 
                     let yd = yd & 0x1f;
                     let dat = io.read_ram(self.ptr + i as Addr);
                     let row0 = (dat as ScreenRow) << 56;
-                    let row = if Q::CLIP_SPRITES { row0 >> xd } else { row0.rotate_right(xd as u32) };
+                    let row = if self.quirks.clip_sprites { row0 >> xd } else { row0.rotate_right(xd as u32) };
 
                     let old_row = io.get_pixel_row(yd);
                     let new_row = old_row ^ row;
@@ -258,16 +239,16 @@ impl<Q: Quirks> CPU<Q> {
                     io.set_pixel_row(yd, new_row);
                 };
                 self.set_flag(collision);
-                if Q::VIDEO_WAIT { self.state = State::WaitFrame };
+                if self.quirks.video_wait { self.state = State::WaitFrame };
             },
             Op::ClearScr => {
                 for y in 0..32 {
                     io.set_pixel_row(y, 0);
                 }
-                if Q::VIDEO_WAIT { self.state = State::WaitFrame };
+                if self.quirks.video_wait { self.state = State::WaitFrame };
             },
             Op::SkipKey(cond, vx) => {
-                let pressed = io.get_keys() & (1 << self.regs[vx as usize]) != 0;
+                let pressed = io.get_keys() & (1 << (self.regs[vx as usize] & 0xf)) != 0;
                 let target = match cond {
                     Cmp::Eq => true,
                     Cmp::NEq => false
